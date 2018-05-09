@@ -1,35 +1,34 @@
 import java.awt.BorderLayout;
 import java.awt.Desktop;
-import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 public class TableVisu extends JPanel implements ActionListener {
 
 	private JButton openButton;
-	private JLabel theLabel;
 	private JTextArea log;
 	private final JFileChooser fc;
+	private char newline = '\n';
+	private int xscale = 2;
+	private int yscale = 2;
+	File svg = new File("table.html");
 
 	public TableVisu() {
 		super(new BorderLayout());
@@ -44,27 +43,10 @@ public class TableVisu extends JPanel implements ActionListener {
 		// Add the buttons and the log to this panel.
 		add(buttonPanel, BorderLayout.PAGE_START);
 
-		String initialText = "<html>\n" + "<a href='http://esialrobotik.fr/'>Lien super cool</a>\n" + "</html>\n";
 		log = new JTextArea(5, 20);
 		log.setMargin(new Insets(5, 5, 5, 5));
 		log.setEditable(false);
 		JScrollPane logScrollPane = new JScrollPane(log);
-		theLabel = new JLabel(initialText) {
-			public Dimension getPreferredSize() {
-				return new Dimension(200, 200);
-			}
-
-			public Dimension getMinimumSize() {
-				return new Dimension(200, 200);
-			}
-
-			public Dimension getMaximumSize() {
-				return new Dimension(200, 200);
-			}
-		};
-		theLabel.setVerticalAlignment(SwingConstants.CENTER);
-		theLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		theLabel.setText(initialText);
 		add(logScrollPane, BorderLayout.CENTER);
 	}
 
@@ -99,6 +81,23 @@ public class TableVisu extends JPanel implements ActionListener {
 		frame.setVisible(true);
 	}
 
+	public void drawPixel(String line, int i, int y, StringBuffer sb, int xoffset) {
+		switch (line.charAt(((xoffset > 0) ? line.length() - i - 1 : line.length() - i - 1))) {
+		case 'x':
+			sb.append("<rect x=\"" + ((xoffset + i) * xscale) + "\" y=\"" + y + "\"width=\"" + xscale + "\" height=\""
+					+ yscale
+					+ "\"\r\n" + "  style=\"fill:red\" />");
+			break;
+		case 'o':
+			sb.append("<rect x=\"" + ((xoffset + i) * xscale) + "\" y=\"" + y + "\"width=\"" + xscale + "\" height=\""
+					+ yscale
+					+ "\"\r\n" + "  style=\"fill:white;\" />");
+			break;
+		default:
+			break;
+		}
+	}
+
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		//Handle open button action.
@@ -108,35 +107,51 @@ public class TableVisu extends JPanel implements ActionListener {
             if (returnVal == JFileChooser.APPROVE_OPTION) {
                 File file = fc.getSelectedFile();
                 //This is where a real application would open the file.
-                System.out.println(file.getName());
+                log.append(file.getName() + newline);
+				if (svg.exists()) {
+					svg.delete();
+					svg = new File("table.html");
+				}
 				StringBuffer sb = new StringBuffer("<html>\n");
 				try (InputStream in = Files.newInputStream(file.toPath());
 						BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
 					String line = null;
+					line = reader.readLine();
+					String[] size = { "", "" };
+					size = line.split(" ");
+					int width = Integer.parseInt(size[0]) / 10;
+					int height = Integer.parseInt(size[1]) / 10;
+					int x = 0; // X width
+					int y = 0; // Y height
+					sb.append("<svg width=\"" + width * 2 * xscale + "\" height=\"" + height * yscale
+							+ "\">");
 					while ((line = reader.readLine()) != null) {
-						System.out.println(line);
-						sb.append(line);
+						for (int i = 0; i < line.length(); i++) {
+							this.drawPixel(line, i, y, sb, 0);
+						}
+						/**
+						 * for (int i = 0; i < line.length(); i++) { this.drawPixel(line, i, y, sb,
+						 * line.length()); }
+						 **/
 						sb.append('\n');
-						log.append(line);
-						log.append("\n");
+						y += yscale;
 					}
+					sb.append("</svg>");
 					sb.append("</html>");
-					theLabel.setText(sb.toString());
+					BufferedWriter bw = Files.newBufferedWriter(svg.toPath());
+					bw.write(sb.toString(), 0, sb.length());
+					bw.flush();
+					try {
+						Desktop.getDesktop().browse(svg.toURI());
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 				} catch (IOException x) {
 					System.err.println(x);
 				}
             } else {
-                System.out.println("Open command cancelled by user.");
-				try {
-					Desktop.getDesktop().browse(new URI("file:///tmp/test.html"));
-				} catch (IOException e1) {
-
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				} catch (URISyntaxException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+                log.append("Open command cancelled by user.");
             }
 
 		}
