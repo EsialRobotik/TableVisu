@@ -81,15 +81,15 @@ public class TableVisu extends JPanel implements ActionListener {
 		frame.setVisible(true);
 	}
 
-	public void drawPixel(String line, int i, int y, StringBuffer sb, int xoffset) {
-		switch (line.charAt(((xoffset > 0) ? line.length() - i - 1 : line.length() - i - 1))) {
+	public void drawPixel(String line, int i, int y, StringBuffer sb) {
+		switch (line.charAt(i)) {
 		case 'x':
-			sb.append("<rect x=\"" + ((xoffset + i) * xscale) + "\" y=\"" + y + "\"width=\"" + xscale + "\" height=\""
+			sb.append("<rect x=\"" + i * xscale + "\" y=\"" + y + "\"width=\"" + xscale + "\" height=\""
 					+ yscale
 					+ "\"\r\n" + "  style=\"fill:red\" />");
 			break;
 		case 'o':
-			sb.append("<rect x=\"" + ((xoffset + i) * xscale) + "\" y=\"" + y + "\"width=\"" + xscale + "\" height=\""
+			sb.append("<rect x=\"" + i * xscale + "\" y=\"" + y + "\"width=\"" + xscale + "\" height=\""
 					+ yscale
 					+ "\"\r\n" + "  style=\"fill:white;\" />");
 			break;
@@ -127,12 +127,8 @@ public class TableVisu extends JPanel implements ActionListener {
 							+ "\">");
 					while ((line = reader.readLine()) != null) {
 						for (int i = 0; i < line.length(); i++) {
-							this.drawPixel(line, i, y, sb, 0);
+							this.drawPixel(line, i, y, sb);
 						}
-						/**
-						 * for (int i = 0; i < line.length(); i++) { this.drawPixel(line, i, y, sb,
-						 * line.length()); }
-						 **/
 						sb.append('\n');
 						y += yscale;
 					}
